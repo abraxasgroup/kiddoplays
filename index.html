@@ -597,14 +597,27 @@ function speakWord(text, onEnd) {
 // SONIDOS (Web Audio)
 // ============================================================
 let audioCtx = null;
+
 function getAudioCtx() {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  // Los navegadores modernos suspenden el contexto hasta un gesto del usuario
+  if (audioCtx.state === 'suspended') audioCtx.resume();
   return audioCtx;
 }
-function playTone(freq, type='sine', duration=0.2, vol=0.3) {
+
+// Desbloquear el AudioContext en el primer toque/clic del usuario
+function unlockAudio() {
+  const ctx = getAudioCtx();
+  if (ctx.state === 'suspended') ctx.resume();
+}
+document.addEventListener('touchstart', unlockAudio, { passive: true });
+document.addEventListener('mousedown',  unlockAudio);
+
+async function playTone(freq, type='sine', duration=0.2, vol=0.3) {
   try {
     const ctx = getAudioCtx();
-    const osc = ctx.createOscillator();
+    if (ctx.state === 'suspended') await ctx.resume();
+    const osc  = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.connect(gain); gain.connect(ctx.destination);
     osc.frequency.value = freq;
